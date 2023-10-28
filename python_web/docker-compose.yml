@@ -1,0 +1,59 @@
+version: '3'  # 使用的docker-compose 版本
+services:
+
+  web:
+    container_name: app_name
+    build: .  # 指定Dockerfile 所在的文件夹路径
+      context: ./dir 
+      dockerfile: Dockerfile-alternate
+      
+      args: # 构建镜像过程中需要的变量
+        buildno: 1
+      
+      cap_add: # 指定容器的内核能力分配 
+        - ALL
+      
+      depends_on: # 自定义DNS的服务器
+        - db
+        - redis
+      
+      dns:  # dns的名称
+        - 8.8.8.8
+      
+      dns_search:  # dns search 的地址
+        - domain1.example.com
+        - domain2.example.com
+      
+      tmpfs: # 挂载一个tmpfs 文件系统到容器中
+
+      env_file: # 如果变量名称与环境名称由冲突，则以后者为准
+        - ./common.env
+      
+      expose: # 暴露端口，但不映射到宿主机
+        - "3000"
+
+
+      extra_hosts:  # 添加对应的容器内的DNS 解析
+        - "googledns:8.8.8.8"
+
+    volumes: #host 文件path映射到容器内的 path
+      - /var/lib/mysql
+      - mysql_data:/var/lib/mysql
+
+
+    environment: # 设置容器内的环境变量
+      MYSQL_HOST: localhost
+
+    healthcheck:
+      test: ["CMD","curl","-f","http://localhost"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+
+    entrypoint: /code/entrypoint.sh
+    working_dir: /code
+    ports:
+     - "8000:5000"
+
+  redis:
+    image: "redis:alpine"
